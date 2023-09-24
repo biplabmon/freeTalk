@@ -4,14 +4,19 @@ dotenv.config();
 import express, { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import cookieSession from 'cookie-session';
 import {
     newPostRouter,
     deletePostRouter,
     updatePostRouter,
     showPostRouter,
+
     newCommentRouter,
-    deleteCommentRouter
+    deleteCommentRouter,
+
+
 } from './routers';
+import { currentUser, requireAuth } from '../common';
 
 
 const app = express();
@@ -21,20 +26,28 @@ app.use(cors({
     optionsSuccessStatus: 200
 }));
 
+app.set("tust proxy", true);
+
 app.use(express.urlencoded({
     extended: false
 }));
 app.use(express.json());
+app.use(cookieSession({
+    signed: false,
+    secure: false
+}));
 
-app.use(newPostRouter);
-app.use(deletePostRouter);
-app.use(updatePostRouter);
+app.use(currentUser);
+
+app.use(requireAuth, newPostRouter);
+app.use(requireAuth, deletePostRouter);
+app.use(requireAuth, updatePostRouter);
 app.use(showPostRouter);
 
-app.use(newCommentRouter);
-app.use(deleteCommentRouter);
+app.use(requireAuth, newCommentRouter);
+app.use(requireAuth, deleteCommentRouter);
 
-app.all('*', (req, res, next) =>{
+app.all('*', (req, res, next) => {
     const error = new Error('not found!') as CustomeError;
     error.status = 404;
     next(error);
@@ -56,6 +69,8 @@ app.use((error: CustomeError, req: Request, res: Response, next: NextFunction): 
 
 const start = async () => {
     if (!process.env.MONGO_URI) throw new Error("MONGO_URI is required");
+
+    if (!process.env.JWT_KEY) throw new Error("JWT_KEY is required");
 
     try {
         await mongoose.connect(process.env.MONGO_URI);
