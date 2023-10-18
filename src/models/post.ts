@@ -2,15 +2,17 @@ import mongoose from "mongoose";
 import { CommentDoc } from "./comments";
 
 
-export interface PostDoc extends mongoose.Document{
+export interface PostDoc extends mongoose.Document {
     title: string,
     content: string,
+    images: Array<{src: string}>,
     comments?: Array<CommentDoc>
 };
 
 export interface CreatePostDto {
     title: string,
-    content: string
+    content: string,
+    images: Array<{src: string}>
 };
 
 export interface PostModel extends mongoose.Model<PostDoc> {
@@ -24,8 +26,11 @@ const postSchema = new mongoose.Schema({
     },
     content: {
         type: String,
-        required:  true
+        required: true
     },
+    images: [
+        { src: { type: String, required: true } }
+    ],
     comments: [
         {
             type: mongoose.Schema.Types.ObjectId,
