@@ -1,17 +1,29 @@
 import { Router, Request, Response, NextFunction } from "express";
-import {User} from "../../models/user";
+import { User } from "../../models/user";
 import jwt from "jsonwebtoken";
-import { BadRequestError } from "../../../common";
+import { BadRequestError, validationRequest } from "../../../common";
+import { body } from "express-validator";
 
 
 const router = Router();
 
-router.post("/signup",async (req: Request, res: Response, next: NextFunction) => {
-    const {email, password} = req.body;
+router.post("/signup", [
+    body('email')
+        .not().isEmpty()
+        .isEmail()
+        .withMessage("a valid email is required"),
 
-    const user = await User.findOne({ email});
+    body('password')
+        .not().isEmpty()
+        .isLength({ min: 6 })
+        .withMessage("a valid password is required")
 
-    if(user) return next(new BadRequestError(`User ${user.email} already exists`));
+], validationRequest, async (req: Request, res: Response, next: NextFunction) => {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (user) return next(new BadRequestError(`User ${user.email} already exists`));
 
     const newUser = User.build({
         email,
@@ -21,11 +33,11 @@ router.post("/signup",async (req: Request, res: Response, next: NextFunction) =>
     await newUser.save();
 
     req.session = {
-        jwt: jwt.sign({email, userId: newUser._id}, process.env.JWT_KEY!, {expiresIn: "10h"})
+        jwt: jwt.sign({ email, userId: newUser._id }, process.env.JWT_KEY!, { expiresIn: "10h" })
     };
 
     res.status(201).send(newUser);
 });
 
 
-export {router as signupRouter};
+export { router as signupRouter };
